@@ -14,8 +14,7 @@ jobs:
       - name: Enable RDP
         run: |
           net user runneradmin Nuvex@12345
-          net localgroup administrators runneradmin /add
-
+          
       - name: Start Ngrok
         run: |
           .\ngrok.exe authtoken 3B1evhpe6OvmZZuS9SxBX9x8URO_wcUeHeT694y3P1aBhN46
