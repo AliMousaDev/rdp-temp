@@ -13,7 +13,7 @@ jobs:
 
       - name: Enable RDP
         run: |
-          net user runneradmin 123456
+          net user runneradmin Nuvex@12345
           net localgroup administrators runneradmin /add
 
       - name: Start Ngrok
