@@ -1,32 +1,25 @@
-name: Windows RDP
-on: workflow_dispatch
+name: CI
+
+on: [push, workflow_dispatch]
+
 jobs:
   build:
+
     runs-on: windows-latest
+
     steps:
-      - name: Enable RDP
-        run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fSingleSessionPerUser" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          net user rdpuser Nuvex@12345 /add
-          net localgroup Administrators rdpuser /add
-          net localgroup "Remote Desktop Users" rdpuser /add
-          Restart-Service -Name "TermService" -Force
-
-      - name: Download Cloudflared
-        run: |
-          Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile C:\cloudflared.exe
-
-      - name: Start Tunnel & Keep Alive
-        run: |
-          Start-Process -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "C:\tunnel.log" -RedirectStandardError "C:\tunnel_err.log" -NoNewWindow
-          Start-Sleep -Seconds 8
-          Write-Host "=== TUNNEL URL ==="
-          Get-Content C:\tunnel_err.log | Select-String "trycloudflare.com"
-          Write-Host "=================="
-          while ($true) {
-            Start-Sleep -Seconds 20
-            Write-Host "Still running..."
-            Get-Content C:\tunnel_err.log | Select-String "trycloudflare.com"
-          }
+    - name: Download
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+    - name: Extract
+      run: Expand-Archive ngrok.zip
+    - name: Auth
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+    - name: Create Tunnel
+      run: .\ngrok\ngrok.exe tcp 3389
