@@ -4,18 +4,25 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Download Ngrok
-        run: |
-          Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-          Expand-Archive ngrok.zip -DestinationPath C:\ngrok
-          
       - name: Enable RDP
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           net user runneradmin Nuvex@12345
 
-      - name: Start Ngrok
+      - name: Download Cloudflared
         run: |
-          C:\ngrok\ngrok.exe authtoken 3B1evhpe6OvmZZuS9SxBX9x8URO_wcUeHeT694y3P1aBhN46
-          C:\ngrok\ngrok.exe tcp 3389
+          Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile C:\cloudflared.exe
+
+      - name: Start Tunnel & Keep Alive
+        run: |
+          Start-Process -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "C:\tunnel.log" -RedirectStandardError "C:\tunnel_err.log" -NoNewWindow
+          Start-Sleep -Seconds 5
+          Get-Content C:\tunnel.log
+          Get-Content C:\tunnel_err.log
+          # Keep the job alive
+          while ($true) {
+            Start-Sleep -Seconds 10
+            Write-Host "Still running..."
+            Get-Content C:\tunnel_err.log -Tail 3
+          }
