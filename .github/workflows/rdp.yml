@@ -17,12 +17,12 @@ jobs:
       - name: Start Tunnel & Keep Alive
         run: |
           Start-Process -FilePath "C:\cloudflared.exe" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "C:\tunnel.log" -RedirectStandardError "C:\tunnel_err.log" -NoNewWindow
-          Start-Sleep -Seconds 5
-          Get-Content C:\tunnel.log
-          Get-Content C:\tunnel_err.log
-          # Keep the job alive
+          Start-Sleep -Seconds 8
+          Write-Host "=== TUNNEL URL ==="
+          Get-Content C:\tunnel_err.log | Select-String "trycloudflare.com"
+          Write-Host "=================="
           while ($true) {
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 20
             Write-Host "Still running..."
-            Get-Content C:\tunnel_err.log -Tail 3
+            Get-Content C:\tunnel_err.log | Select-String "trycloudflare.com"
           }
